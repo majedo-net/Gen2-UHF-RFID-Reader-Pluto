@@ -8,40 +8,64 @@ from gnuradio import analog
 from gnuradio import digital
 from gnuradio import qtgui
 import rfid
+from gnuradio import iio
 
 DEBUG = False
 
 class reader_top_block(gr.top_block):
 
   # Configure usrp source
+  # def u_source(self):
+  #   self.source = uhd.usrp_source(
+  #   device_addr=self.usrp_address_source,
+  #   stream_args=uhd.stream_args(
+  #   cpu_format="fc32",
+  #   channels=range(1),
+  #   ),
+  #   )
+  #   self.source.set_samp_rate(self.adc_rate)
+  #   self.source.set_center_freq(self.freq, 0)
+  #   self.source.set_gain(self.rx_gain, 0)
+  #   self.source.set_antenna("RX2", 0)
+  #   #self.source.set_auto_dc_offset(False) # Uncomment this line for SBX daughterboard
+
   def u_source(self):
-    self.source = uhd.usrp_source(
-    device_addr=self.usrp_address_source,
-    stream_args=uhd.stream_args(
-    cpu_format="fc32",
-    channels=range(1),
-    ),
-    )
-    self.source.set_samp_rate(self.adc_rate)
-    self.source.set_center_freq(self.freq, 0)
+    self.source = iio.fmcomms2_source_fc32('ip:pluto.local' if 'ip:pluto.local' else iio.get_pluto_uri(), [True, True], 20000)
+    self.packet_len = packet_len = 256
+    self.source.set_len_tag_key('packet_len')
+    self.source.set_frequency(self.freq)
+    self.source.set_samplerate(self.adc_rate)
+    self.source.set_gain_mode(0, 'manual')
     self.source.set_gain(self.rx_gain, 0)
-    self.source.set_antenna("RX2", 0)
-    #self.source.set_auto_dc_offset(False) # Uncomment this line for SBX daughterboard
+    self.source.set_quadrature(True)
+    self.source.set_rfdc(True)
+    self.source.set_bbdc(True)
+    self.source.set_filter_params('Auto', '', 0, 0)
+
 
   # Configure usrp sink
-  def u_sink(self):
-    self.sink = uhd.usrp_sink(
-    device_addr=self.usrp_address_sink,
-    stream_args=uhd.stream_args(
-    cpu_format="fc32",
-    channels=range(1),
-    ),
-    )
-    self.sink.set_samp_rate(self.dac_rate)
-    self.sink.set_center_freq(self.freq, 0)
-    self.sink.set_gain(self.tx_gain, 0)
-    self.sink.set_antenna("TX/RX", 0)
-    
+  # def u_sink(self):
+  #   self.sink = uhd.usrp_sink(
+  #   device_addr=self.usrp_address_sink,
+  #   stream_args=uhd.stream_args(
+  #   cpu_format="fc32",
+  #   channels=range(1),
+  #   ),
+  #   )
+  #   self.sink.set_samp_rate(self.dac_rate)
+  #   self.sink.set_center_freq(self.freq, 0)
+  #   self.sink.set_gain(self.tx_gain, 0)
+  #   self.sink.set_antenna("TX/RX", 0)
+    def u_sink(self):
+      self.sink = iio.fmcomms2_sink_fc32('ip:pluto.local' if 'ip:pluto.local' else iio.get_pluto_uri(), [True, True], 32768, False)
+      self.sink.set_len_tag_key('packet_len')
+      self.sink.set_bandwidth(20000000)
+      self.sink.set_frequency(self.freq)
+      self.sink.set_samplerate(self.dac_rate)
+      self.sink.set_attenuation(0, 0)
+      self.sink.set_filter_params('Auto', '', 0, 0)
+
+
   def __init__(self):
     gr.top_block.__init__(self)
 
