@@ -30,17 +30,22 @@ class reader_top_block(gr.top_block):
   #   #self.source.set_auto_dc_offset(False) # Uncomment this line for SBX daughterboard
 
   def u_source(self):
-    self.source = iio.fmcomms2_source_fc32('ip:pluto.local' if 'ip:pluto.local' else iio.get_pluto_uri(), [True, True], 20000)
     self.packet_len = packet_len = 256
-    self.source.set_len_tag_key('packet_len')
-    self.source.set_frequency(self.freq)
-    self.source.set_samplerate(self.adc_rate)
-    self.source.set_gain_mode(0, 'manual')
-    self.source.set_gain(self.rx_gain, 0)
-    self.source.set_quadrature(True)
-    self.source.set_rfdc(True)
-    self.source.set_bbdc(True)
-    self.source.set_filter_params('Auto', '', 0, 0)
+    self.source = iio.pluto_source('ip:pluto.local',self.freq,self.adc_rate,30000000,self.packet_len,True,True,True,'manual',20,'',False)
+
+#self.pluto = iio.pluto_source('ip:pluto.local', 93300000, 2800000, 30000000, 0x8000, True, True, True, "manual", 20, '', False)
+
+
+
+    #self.source.set_len_tag_key('packet_len')
+    #self.source.set_frequency(self.freq)
+    #self.source.set_samplerate(self.adc_rate)
+    #self.source.set_gain_mode(0, 'manual')
+    #self.source.set_gain(self.rx_gain, 0)
+    #self.source.set_quadrature(True)
+    #self.source.set_rfdc(True)
+    #self.source.set_bbdc(True)
+    #self.source.set_filter_params('Auto', '', 0, 0)
 
 
   # Configure usrp sink
@@ -56,14 +61,16 @@ class reader_top_block(gr.top_block):
   #   self.sink.set_center_freq(self.freq, 0)
   #   self.sink.set_gain(self.tx_gain, 0)
   #   self.sink.set_antenna("TX/RX", 0)
-    def u_sink(self):
-      self.sink = iio.fmcomms2_sink_fc32('ip:pluto.local' if 'ip:pluto.local' else iio.get_pluto_uri(), [True, True], 32768, False)
-      self.sink.set_len_tag_key('packet_len')
-      self.sink.set_bandwidth(20000000)
-      self.sink.set_frequency(self.freq)
-      self.sink.set_samplerate(self.dac_rate)
-      self.sink.set_attenuation(0, 0)
-      self.sink.set_filter_params('Auto', '', 0, 0)
+    
+  def u_sink(self):
+    self.sink = iio.pluto_sink('ip:pluto.local',self.freq,self.dac_rate,20000000,self.packet_len,False,15,'',False)
+
+    #self.sink.set_len_tag_key('packet_len')
+    #self.sink.set_bandwidth(20000000)
+    #self.sink.set_frequency(self.freq)
+    #self.sink.set_samplerate(self.dac_rate)
+    #self.sink.set_attenuation(0, 0)
+    #self.sink.set_filter_params('Auto', '', 0, 0)
 
 
   def __init__(self):
@@ -73,11 +80,11 @@ class reader_top_block(gr.top_block):
     #rt = gr.enable_realtime_scheduling() 
 
     ######## Variables #########
-    self.dac_rate = 1e6                 # DAC rate 
-    self.adc_rate = 100e6/50            # ADC rate (2MS/s complex samples)
+    self.dac_rate = 3000000                 # DAC rate 
+    self.adc_rate = 3000000            # ADC rate (2MS/s complex samples)
     self.decim     = 5                    # Decimation (downsampling factor)
-    self.ampl     = 0.1                  # Output signal amplitude (signal power vary for different RFX900 cards)
-    self.freq     = 910e6                # Modulation frequency (can be set between 902-920)
+    self.ampl     = 0.5                  # Output signal amplitude (signal power vary for different RFX900 cards)
+    self.freq     = 915000000               # Modulation frequency (can be set between 902-920)
     self.rx_gain   = 20                   # RX Gain (gain at receiver)
     self.tx_gain   = 0                    # RFX900 no Tx gain option
 
@@ -120,7 +127,7 @@ class reader_top_block(gr.top_block):
       self.connect(self.to_complex, self.sink)
 
       #File sinks for logging (Remove comments to log data)
-      #self.connect(self.source, self.file_sink_source)
+      self.connect(self.source, self.file_sink_source)
 
     else :  # Offline Data
       self.file_source               = blocks.file_source(gr.sizeof_gr_complex*1, "../misc/data/file_source_test",False)   ## instead of uhd.usrp_source
